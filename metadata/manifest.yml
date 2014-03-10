@@ -1,0 +1,81 @@
+---
+Name: haproxy
+Cartridge-Short-Name: HAPROXY
+Display-Name: Web Load Balancer
+Description: Acts as a load balancer for your web cartridge and will automatically
+  scale up to handle incoming traffic. Is automatically added to scaled applications
+  when they are created and cannot be removed or added to an application after the
+  fact.
+Version: '1.4'
+License: GPLv2+
+License-Url: http://www.gnu.org/licenses/gpl-2.0.html
+Vendor: http://haproxy.1wt.eu/
+Cartridge-Version: 0.0.13
+Compatible-Versions:
+- 0.0.11
+- 0.0.12
+Cartridge-Vendor: redhat
+Categories:
+- web_proxy
+- scales
+- embedded
+Website: http://haproxy.1wt.eu/
+Provides:
+- haproxy-1.4
+- haproxy
+- web_proxy
+Components:
+  web_proxy:
+    Publishes:
+      get-balancer-connection-info:
+        Type: NET_TCP:http:http
+      publish-haproxy-status-url:
+        Type: NET_TCP:haproxy-status-info
+    Subscribes:
+      set-db-connection-info:
+        Type: NET_TCP:db:connection-info
+        Required: false
+      set-haproxy-status-url:
+        Type: NET_TCP:haproxy-status-info
+    Scaling:
+      Min: 1
+      Max: 1
+      Multiplier: -1
+Configure-Order:
+- web_framework
+- web_proxy
+Group-Overrides:
+- components:
+  - web_framework
+  - web_proxy
+Endpoints:
+- Private-IP-Name: IP
+  Private-Port-Name: PORT
+  Private-Port: 8080
+  Public-Port-Name: PROXY_PORT
+  Protocols:
+  - http
+  - ws
+  Mappings:
+  - Frontend: ''
+    Backend: ''
+    Options:
+      target_update: true
+      connections: -1
+      websocket: true
+  - Frontend: /health
+    Backend: configuration/health
+    Options:
+      file: true
+- Private-IP-Name: STATUS_IP
+  Private-Port-Name: STATUS_PORT
+  Private-Port: 8080
+  Protocols:
+  - http
+  Mappings:
+  - Frontend: /haproxy-status
+    Backend: /
+  - Frontend: /health
+    Backend: ''
+    Options:
+      health: true

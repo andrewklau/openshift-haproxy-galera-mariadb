@@ -1,0 +1,314 @@
+#!/bin/bash -e
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+export STOPTIMEOUT=20
+
+HAPROXY_CART="haproxy-1.4"
+export HAPROXY_PID="${OPENSHIFT_HAPROXY_DIR}/run/haproxy.pid"
+
+if ! [ $# -gt 0 ]
+then
+    echo "Usage: \$0 [start|restart|stop|status|deploy]"
+    exit 1
+fi
+
+function isrunning() {
+    if [ -f "${HAPROXY_PID}" ]; then
+        haproxy_pid=`cat $HAPROXY_PID 2> /dev/null`
+        [ -z "$haproxy_pid" ]  &&  return 1
+        current_user=`id -u`
+        if `ps --pid $haproxy_pid > /dev/null 2>&1` ||     \
+           `pgrep -x haproxy -u $current_user > /dev/null 2>&1`; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+function ping_server_gears() {
+    #  Ping the server gears and wake 'em up on startup.
+    for geardns in $(web_gears | cut -f 3 -d ','); do
+          [ -z "$geardns" ]  ||  curl "http://$geardns/" > /dev/null 2>&1  ||  :
+    done
+}
+
+function wait_to_start() {
+   ep=$(grep "listen stats" $OPENSHIFT_HAPROXY_DIR/conf/haproxy.cfg | sed 's#listen\s*stats\s*\(.*\)#\1#')
+   i=0
+   while ( ! curl "http://$ep/haproxy-status/;csv" &> /dev/null )  && [ $i -lt 10 ]; do
+       sleep 1
+       i=$(($i + 1))
+   done
+
+   if [ $i -ge 10 ]; then
+      echo "`date`: HAProxy status check - max retries ($i) exceeded" 1>&2
+   fi
+}
+
+function _stop_haproxy_ctld_daemon() {
+    haproxy_ctld_daemon stop 2>&1
+}
+
+function _start_haproxy_ctld_daemon() {
+    # Start auto-scaling only on the head-gear
+    [ "${OPENSHIFT_GEAR_DNS}" != "${OPENSHIFT_APP_DNS}" ] && return 0
+    disable_as="${OPENSHIFT_REPO_DIR}/.openshift/markers/disable_auto_scaling"
+    [ -f "$disable_as" ]  &&  return 0
+    _stop_haproxy_ctld_daemon  ||  :
+    haproxy_ctld_daemon start 2>&1
+}
+
+function _start_haproxy_service() {
+    if ! isrunning
+    then
+        ping_server_gears
+        /usr/sbin/haproxy -f $OPENSHIFT_HAPROXY_DIR/conf/haproxy.cfg > $OPENSHIFT_HAPROXY_LOG_DIR/haproxy.log 2>&1
+        _start_haproxy_ctld_daemon
+        wait_to_start
+    else
+        echo "HAProxy already running" 1>&2
+        wait_to_start
+
+        # support auto reloading of this action hook on git push
+        if [ -x "$OPENSHIFT_REPO_DIR/.openshift/action_hooks/haproxy_ctld.rb" ]; then
+            echo "Action hook haproxy_ctld.rb detected"
+            _stop_haproxy_ctld_daemon || :
+            _start_haproxy_ctld_daemon
+            echo "Action hook haproxy_ctld.rb restarted"
+        fi
+    fi
+}
+
+function _stop_haproxy_service() {
+    _stop_haproxy_ctld_daemon
+    [ -f $HAPROXY_PID ]  &&  pid=$( /bin/cat "${HAPROXY_PID}" )
+    if `ps -p $pid > /dev/null 2>&1`; then
+        /bin/kill $pid
+        ret=$?
+        if [ $ret -eq 0 ]; then
+            TIMEOUT="$STOPTIMEOUT"
+            while [ $TIMEOUT -gt 0 ] && [ -f "$HAPROXY_PID" ]; do
+                /bin/kill -0 "$pid" >/dev/null 2>&1 || break
+                sleep .5
+                let TIMEOUT=${TIMEOUT}-1
+            done
+        fi
+    else
+        if `pgrep -x haproxy > /dev/null 2>&1`
+        then
+            echo "Warning: HAProxy process exists without a pid file.  Use force-stop to kill." 1>&2
+        else
+            echo "HAProxy already stopped" 1>&2
+        fi
+    fi
+}
+
+function _restart_haproxy_service() {
+    _stop_haproxy_service || pkill haproxy || :
+    _start_haproxy_service
+}
+
+function _reload_haproxy_service() {
+    [ -n "$1" ]  &&  zopts="-sf $1"
+    ping_server_gears
+    /usr/sbin/haproxy -f $OPENSHIFT_HAPROXY_DIR/conf/haproxy.cfg ${zopts} > /dev/null 2>&1
+}
+
+function _reload_service() {
+    [ -f $HAPROXY_PID ]  &&  zpid=$( /bin/cat "${HAPROXY_PID}" )
+    i=0
+    while (! _reload_haproxy_service "$zpid" )  && [ $i -lt 60 ]; do
+        sleep 2
+        i=$(($i + 1))
+        echo "`date`: Retrying HAProxy service reload - attempt #$((i+1)) ... "
+    done
+
+    wait_to_start
+}
+
+function start() {
+    _start_haproxy_service
+    isrunning  &&  echo "HAProxy instance is started"
+}
+
+function stop() {
+    _stop_haproxy_service
+    isrunning  ||  echo "HAProxy instance is stopped"
+}
+
+function restart() {
+    _restart_haproxy_service
+    isrunning  &&  echo "Restarted HAProxy instance"
+}
+
+function reload() {
+    if ! isrunning; then
+       _start_haproxy_service
+    else
+       echo "`date`: Reloading HAProxy service " 1>&2
+       _reload_service
+    fi
+
+    isrunning  &&  echo "Reloaded HAProxy instance"
+}
+
+function force-reload() {
+    if isrunning; then
+        echo "`date`: Conditionally reloading HAProxy service " 1>&2
+        _reload_service
+        isrunning  &&  echo "Conditionally reloaded HAProxy"
+    fi
+}
+
+function status() {
+    if isrunning; then
+        client_result "HAProxy instance is running"
+    else
+        client_result "HAProxy instance is stopped"
+    fi
+}
+
+# Disable the specified backend server in the proxy configuration, so
+# that it remains disabled on restart.
+function disable-server-in-config() {
+    haproxy_cfg=$OPENSHIFT_HAPROXY_DIR/conf/haproxy.cfg
+    if grep $1 $haproxy_cfg | grep -v disabled &> /dev/null; then
+        (
+        flock 200
+        cp -f "$haproxy_cfg" /tmp/haproxy.cfg.$$
+        sed -i "/$1/ s#\$# disabled#g" /tmp/haproxy.cfg.$$
+        cat /tmp/haproxy.cfg.$$ > "$haproxy_cfg"
+        rm -f /tmp/haproxy.cfg.$$
+        ) 200>${haproxy_cfg}.lock
+    fi
+}
+
+# Enable the specified backend server in the proxy configuration, so
+# that it remains disabled on restart.
+function enable-server-in-config() {
+    haproxy_cfg=$OPENSHIFT_HAPROXY_DIR/conf/haproxy.cfg
+    if grep $1 $haproxy_cfg | grep disabled &> /dev/null; then
+        (
+        flock 200
+        cp -f "$haproxy_cfg" /tmp/haproxy.cfg.$$
+        sed -i "/$1/ s#disabled\$##g" /tmp/haproxy.cfg.$$
+        cat /tmp/haproxy.cfg.$$ > "$haproxy_cfg"
+        rm -f /tmp/haproxy.cfg.$$
+        ) 200>${haproxy_cfg}.lock
+    fi
+}
+
+# Get the application domain from the app dns.
+function get-app-domain() {
+    dnsparts=(${OPENSHIFT_APP_DNS//./ })
+    appdomain=(${dnsparts[0]//-/ })
+    domain=${appdomain[1]}
+    echo $domain
+}
+
+# Disable the specified backend server from the proxy so that no traffic
+# is routed to it.
+function disable-server() {
+    shift
+
+    local persist="no"
+    if [ "$1" == "persist" ]; then
+        shift
+        persist="yes"
+    fi
+
+    for gear in $@; do
+        echo "Disabling server $1"
+        if [ "${gear}" == "${OPENSHIFT_GEAR_UUID}" ]; then
+            gearid="local-gear"
+        elif [ "${gear}" == "${OPENSHIFT_APP_UUID}" ]; then
+            domain=$(get-app-domain)
+            gearid="gear-${OPENSHIFT_APP_NAME}-${domain}"
+        else
+            domain=$(get-app-domain)
+            gearid="gear-${gear}-${domain}"
+        fi
+        set +e
+        echo "disable server express/$gearid" | socat stdio $OPENSHIFT_HAPROXY_DIR/run/stats > /dev/null
+        if [ "$persist" == "yes" ]; then
+            disable-server-in-config $gearid
+        fi
+        set -e
+    done
+}
+
+# Enable the specified backend server in the proxy configuration, so
+# that traffic is routed to it.
+function enable-server() {
+    shift
+
+    local persist="no"
+    if [ "$1" == "persist" ]; then
+        shift
+        persist="yes"
+    fi
+
+    for gear in $@; do
+        echo "Enabling server $gear"
+        if [ "${gear}" == "${OPENSHIFT_GEAR_UUID}" ]; then
+            gearid="local-gear"
+        elif [ "${gear}" == "${OPENSHIFT_APP_UUID}" ]; then
+            domain=$(get-app-domain)
+            gearid="gear-${OPENSHIFT_APP_NAME}-${domain}"
+        else
+            domain=$(get-app-domain)
+            gearid="gear-${gear}-${domain}"
+        fi
+        info=($(app_web_to_proxy_ratio_and_colocated_gears))
+        ratio=${info[0]}
+        unset info[0]
+        declare -i proxy_gear_ttl="${OPENSHIFT_HAPROXY_PROXY_GEAR_TTL:-3}"
+        if [ "$proxy_gear_ttl" -ge 0 -a "$proxy_gear_ttl" -lt 3 ]; then
+            proxy_gear_ttl=3
+        fi
+        if [ "$proxy_gear_ttl" -gt -1 -a "$ratio" -ge "$proxy_gear_ttl" ]; then
+            declare -A map
+            for uuid in ${info[@]}; do
+                map["$uuid"]=1
+            done
+            if [[ ${map["$gear"]} ]]; then
+                echo "Not enabling proxy gear since web/proxy ratio is $ratio"
+                return 0
+            fi
+        fi
+        set +e
+        echo "enable server express/$gearid" | socat stdio $OPENSHIFT_HAPROXY_DIR/run/stats > /dev/null
+        if [ "$persist" == "yes" ]; then
+            enable-server-in-config $gearid
+        fi
+        set -e
+    done
+}
+
+function update-cluster() {
+    shift
+    ${OPENSHIFT_HAPROXY_DIR}/usr/bin/update-cluster "$@"
+}
+
+#
+# main():
+#
+
+
+if ! [ -f ${OPENSHIFT_HAPROXY_DIR}/conf/haproxy.cfg ]; then
+  client_error "HAProxy required configuration file \"$(basename $f)\" not found."
+  exit 129
+fi
+
+# And then on the haproxy and haproxy_ctld.
+case "$1" in
+    start)          start               ;;
+    stop)           stop                ;;
+    restart)        restart             ;;
+    reload)         reload              ;;
+    force-reload)   force-reload        ;;
+    status)         status              ;;
+    disable-server) disable-server "$@" ;;
+    enable-server)  enable-server  "$@" ;;
+    update-cluster) update-cluster "$@" ;;
+esac

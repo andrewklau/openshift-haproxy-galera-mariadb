@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Adds a gear to the haproxy configuration.
+
+# Exit on any errors
+set -e
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+source /etc/openshift/node.conf
+
+function print_help {
+    echo "Usage: $0 app-name namespace uuid"
+    echo "Start a running application"
+
+    echo "$0 $@" | logger -p local0.notice -t openshift_origin_haproxy_set_proxy
+    exit 1
+}
+
+while getopts 'd' OPTION
+do
+    case $OPTION in
+        d) set -x
+        ;;
+        ?) print_help
+        ;;
+    esac
+done
+
+
+#[ $# -gt 3 ] || print_help
+
+exitcode=0
+
+declare -A curr_server_gears
+
+haproxy_cfg=$OPENSHIFT_HAPROXY_DIR/conf/haproxy.cfg
+
+# Establish locking file descriptor
+exec 200>${haproxy_cfg}.lock
+
+# The values are the gear endpoints.
+kvargs=$@
+for arg in $kvargs; do
+    zinfo=$(echo "$arg" | cut -f 2 -d '=' | tr -d "'")
+    zarr=(${zinfo//|/ })
+    ep="${zarr[1]}"
+    #  Add gear to the proxy configuration if not already in there.
+    #  Gear end-point is the form: $gear-ipaddress:$gear-port
+    gear_name=$(echo "${zarr[0]}" | cut -f 1 -d '.')
+
+    # Ensure endpoint is valid.
+    [ -z "$ep" ]  &&  continue
+
+    # And of the form: $valid-dns-entry:$port-number
+    # (valid-dns-entry regex portion from http://stackoverflow.com/a/3824105/305572)
+    if [[ ! $ep =~ ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*:[0-9]{4,5}$ ]]; then
+       # write/log error, set exit code but continue/process remaining entries.
+       echo "${@:1:3} - Invalid endpoint '$ep' passed in input - $zinfo" 1>&2
+       exitcode=22
+       continue
+    fi
+
+	# If this is the local gear, we are NOT creating an entry for it
+	# The local gear entry is made separately later below
+    if [ "$OPENSHIFT_GEAR_DNS" != "${zarr[0]}" ]; then 
+        flock 200
+        curr_server_gears[$gear_name]="$ep"
+        if grep "server gear-$gear_name" "$haproxy_cfg" > /dev/null 2>&1; then
+            sed -i "/\s*server\s*gear-${gear_name}\s.*/d" $haproxy_cfg
+        fi
+
+        echo "    server gear-$gear_name $ep check fall 2 rise 3 inter 2000 cookie $gear_name" >> "$haproxy_cfg"
+        flock -u 200
+    fi
+done
+
+# Now remove all the gears from the haproxy configuration which are not in the
+# current set. No recreate permissions on haproxy.cfg, so need to use a temp
+# file to operate on and then overlay the contents of haproxy.cfg
+srvgears=$(grep -E "server\s*gear" "$haproxy_cfg" |  \
+           sed "s/\s*server\s*gear-\([A-Za-z0-9\-]*\)\s.*/\\1/g" | tr "\n" " ")
+flock 200
+cp -f "$haproxy_cfg" /tmp/haproxy.cfg.$$
+for sg in $srvgears; do
+    if [ -z "${curr_server_gears[$sg]}" ]; then
+        sed -i "/\s*server\s*gear-$sg\s.*/d" /tmp/haproxy.cfg.$$
+    fi
+done
+
+# Get the local app server endpoint.
+#
+prim_cart=$(primary_cartridge_short_name)
+prim_cart_ip="OPENSHIFT_${prim_cart}_IP"
+prim_cart_port="OPENSHIFT_${prim_cart}_PORT"
+eval local_ip=\$${prim_cart_ip}
+if [ -z "$local_ip" ]; then
+    first_ip_in_manifest=$(primary_cartridge_private_ip_name)
+    prim_cart_ip="OPENSHIFT_${prim_cart}_${first_ip_in_manifest}"
+    eval local_ip=\$${prim_cart_ip}
+fi
+eval local_port=\$${prim_cart_port}
+if [ -z "$local_port" ]; then
+    first_port_in_manifest=$(primary_cartridge_private_port_name)
+    prim_cart_port="OPENSHIFT_${prim_cart}_${first_port_in_manifest}"
+    eval local_port=\$${prim_cart_port}
+fi
+local_ep=$local_ip:$local_port
+
+# Add the local gear
+sed -i "/\s*server\s*local-gear\s.*/d" /tmp/haproxy.cfg.$$
+echo "    server local-gear $local_ep check fall 2 rise 3 inter 2000 cookie local-$OPENSHIFT_GEAR_UUID" >> /tmp/haproxy.cfg.$$
+
+cat /tmp/haproxy.cfg.$$ > "$haproxy_cfg"
+rm -f /tmp/haproxy.cfg.$$
+flock -u 200
+
+uuid=$3
+/usr/bin/gear reload --cart haproxy-$OPENSHIFT_HAPROXY_VERSION
+appctl_exitcode=$?
+
+info=($(app_web_to_proxy_ratio_and_colocated_gears))
+ratio=${info[0]}
+
+unset info[0]
+
+echo "Web/Proxy gears ratio $ratio"
+if [ "$ratio" -ge 3 ]; then
+    echo "Disabling colocated gears ${info[@]}"
+    nohup $OPENSHIFT_HAPROXY_DIR/usr/bin/disable-colocated-gears ${info[@]} &
+else
+    echo "No disabling required"
+fi
+
+
+# Pass the appropriate exit code back.
+[ $exitcode -ne 0 ]  &&  exit $exitcode
+exit $appctl_exitcode
