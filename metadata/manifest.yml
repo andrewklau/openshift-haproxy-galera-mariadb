@@ -1,81 +1,77 @@
 ---
-Name: haproxy
-Cartridge-Short-Name: HAPROXY
-Display-Name: Web Load Balancer
-Description: Acts as a load balancer for your web cartridge and will automatically
-  scale up to handle incoming traffic. Is automatically added to scaled applications
-  when they are created and cannot be removed or added to an application after the
-  fact.
+Name: mariadb-galera
+Cartridge-Short-Name: HAPROXYMARIADB
+Architecture: noarch
+Display-Name: HAProxy for MariaDB Galera Cluster
+Description: Acts as the front end for the MariaDB Galera Cluster, providing a single point of entry and also used as a metadata store for prevention of split-brain.
+Source-Url: https://github.com/andrewklau/openshift-haproxy-galera-mariadb/archive/master.zip
 Version: '1.4'
-License: GPLv2+
-License-Url: http://www.gnu.org/licenses/gpl-2.0.html
+Cartridge-Version: 1.0.0
+Cartridge-Vendor: andrewklau
+License: GPL
 Vendor: http://haproxy.1wt.eu/
-Cartridge-Version: 0.0.13
-Compatible-Versions:
-- 0.0.11
-- 0.0.12
-Cartridge-Vendor: redhat
 Categories:
 - web_proxy
 - scales
 - embedded
 Website: http://haproxy.1wt.eu/
+Cart-Data:
+- Key: username
+  Type: cart_data
+  Description: Root user on mariadb database
+- Key: password
+  Type: cart_data
+  Description: Password for root user on mariadb database
+- Key: database_name
+  Type: cart_data
+  Description: MariaDB database name
+- Key: connection_url
+  Type: cart_data
+  Description: MariaDB connection URL
+   
+- Key: OPENSHIFT_APP_DNS
+  Type: environment
+  Description: "Fully qualified domain name for the application."
+- Key: OPENSHIFT_APP_NAME
+  Type: environment
+  Description: "Application name"
+- Key: OPENSHIFT_DATA_DIR
+  Type: environment
+  Description: "Directory to store application data files. Preserved across git-pushes. Not shared across gears."
+- Key: OPENSHIFT_APP_UUID
+  Type: environment
+  Description: "Unique ID which identified the application. Does not change between gears."
+- Key: OPENSHIFT_GEAR_UUID
+  Type: environment
+  Description: "Unique ID which identified the gear. This value changes between gears."
+  
 Provides:
 - haproxy-1.4
 - haproxy
 - web_proxy
-Components:
-  web_proxy:
-    Publishes:
-      get-balancer-connection-info:
-        Type: NET_TCP:http:http
-      publish-haproxy-status-url:
-        Type: NET_TCP:haproxy-status-info
-    Subscribes:
-      set-db-connection-info:
-        Type: NET_TCP:db:connection-info
-        Required: false
-      set-haproxy-status-url:
-        Type: NET_TCP:haproxy-status-info
-    Scaling:
-      Min: 1
-      Max: 1
-      Multiplier: -1
-Configure-Order:
-- web_framework
-- web_proxy
-Group-Overrides:
-- components:
-  - web_framework
-  - web_proxy
+Publishes:
+  publish-haproxy:
+    Type: NET_TCP:haproxy
+Subscribes:
+  set-mariadb-node:
+    Type: NET_TCP:mariadb-cluster
+Scaling:
+  Min: 1
+  Max: 1
 Endpoints:
-- Private-IP-Name: IP
-  Private-Port-Name: PORT
-  Private-Port: 8080
-  Public-Port-Name: PROXY_PORT
-  Protocols:
-  - http
-  - ws
-  Mappings:
-  - Frontend: ''
-    Backend: ''
-    Options:
-      target_update: true
-      connections: -1
-      websocket: true
-  - Frontend: /health
-    Backend: configuration/health
-    Options:
-      file: true
-- Private-IP-Name: STATUS_IP
+- Private-IP-Name: HOST
+  Private-Port-Name: DB_PORT
+  Private-Port: 3306
+  Public-Port-Name: PROXY_DB_PORT
+- Private-IP-Name: PROXY_HOST
   Private-Port-Name: STATUS_PORT
-  Private-Port: 8080
+  Private-Port: 80
+  Public-Port-Name: PROXY_STATUS_PORT
+- Private-IP-Name: HOST
+  Private-Port-Name: META_PORT
+  Private-Port: 8000
+  Public-Port-Name: PROXY_META_PORT
   Protocols:
   - http
-  Mappings:
-  - Frontend: /haproxy-status
-    Backend: /
-  - Frontend: /health
-    Backend: ''
-    Options:
-      health: true
+  - mysql
+Install-Build-Required: false

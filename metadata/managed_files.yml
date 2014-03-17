@@ -1,12 +1,13 @@
 ---
-setup_rewritten:
-- bin/*
+snapshot_exclusions:
+- mariadb/*
 locked_files:
-- env/
-- env/*
-- metadata/
 - bin/
 - bin/*
+- env/*
+- metadata/
+- metadata/*
+- libs/*
 - hooks/
 - hooks/*
 processed_templates:
