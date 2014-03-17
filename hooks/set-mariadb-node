@@ -1,0 +1,63 @@
+#!/bin/bash
+
+set -e
+
+# Manual Test
+# sh hooks/set-mariadb-node publish-mariadb mariadb andrewklau GEAR-DNS:MYSQL-PORT:GALERA-PORT:SST-PORT
+
+#app_name=$1
+#namespace=$2
+#local_gear=$3
+
+# echo "$@" >> $OPENSHIFT_HAPROXYMARIADB_DIR/hook-log
+
+# Touch our variables so they are owned by our user
+if [ ! -f $OPENSHIFT_MARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]; then
+	touch $OPENSHIFT_MARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS
+fi
+
+
+echo ${@:4};
+for arg in ${@:4}; do
+	arg=$(echo "$arg" | tr -d "\n" | tr -d "'")
+	gear=$(echo "$arg" | cut -f 1 -d '=')
+	addr=$(echo "$arg" | cut -f 3 -d '=')
+
+	# addr will have a format like this: 
+	# OPENSHIFT_MARIADB_NODE=GEAR-DNS:MYSQL-PORT:GALERA-PORT:SST-PORT
+
+	# Split the addr string into an array
+	addr_array=(${addr//:/ })
+
+	# Result:
+	# ${addr_array[0]} - GEAR-DNS
+	# ${addr_array[0]} - MYSQL-PORT
+	# ${addr_array[0]} - GALERA-PORT
+	# ${addr_array[0]} - SST PORT
+
+	node="${addr_array[0]}:${addr_array[1]}"
+	galera="${addr_array[0]}:${addr_array[2]}"
+	sst="${addr_array[0]}:${addr_array[3]}"
+	
+	## 
+	# MariaDB End Points
+	##
+
+	# List of Nodes gears
+	node_gears=( `cat $OPENSHIFT_MARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS` )
+
+	# check if exists
+	if fgrep -q "${node}" $OPENSHIFT_MARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS
+	then
+		# Remove the address from the array
+		# node_gears=( "${node_gears[@]/$node}" )
+		echo 'Doing nothing...'
+	else
+		# Append to array of gears
+		node_gears+=($node)
+	fi
+
+	# Save our results
+	echo ${node_gears[@]} > $OPENSHIFT_MARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS
+
+done
