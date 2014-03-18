@@ -11,8 +11,8 @@ Cartridge-Vendor: andrewklau
 License: GPL
 Vendor: http://haproxy.1wt.eu/
 Categories:
-- web_proxy
-- scales
+- service
+- database
 - embedded
 Website: http://haproxy.1wt.eu/
 Cart-Data:
