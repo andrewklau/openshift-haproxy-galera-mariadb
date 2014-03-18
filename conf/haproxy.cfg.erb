@@ -25,12 +25,12 @@ global
     #
     #log         127.0.0.1 local2
 
-    pidfile     <%= ENV['OPENSHIFT_HAPROXY_DIR'] %>/run/haproxy.pid
+    pidfile     <%= ENV['OPENSHIFT_HAPROXYMARIADB_DIR'] %>/run/haproxy.pid
     maxconn     256
     daemon
 
     # turn on stats unix socket
-    stats socket <%= ENV['OPENSHIFT_HAPROXY_DIR'] %>/run/stats level admin
+    stats socket <%= ENV['OPENSHIFT_HAPROXYMARIADB_DIR'] %>/run/stats level admin
 
 #---------------------------------------------------------------------
 # common defaults that all the 'listen' and 'backend' sections will
@@ -54,8 +54,8 @@ defaults
     timeout check           10s
     maxconn                 128
 
-listen stats <%= "#{ENV['OPENSHIFT_HAPROXYMARIADB_HOST']}:#{ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_STATUS_PORT']}" %>
-    bind <%= "{ENV['OPENSHIFT_HAPROXYMARIADB_HOST']}:{ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_STATUS_PORT']}" %>
+listen stats
+    bind <%= ENV['OPENSHIFT_HAPROXYMARIADB_HOST'] %>:<%= ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_STATUS_PORT'] %>
     mode http
     stats enable
     stats uri /
