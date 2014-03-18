@@ -37,10 +37,12 @@ function wait_to_start() {
 }
 
 function _start_haproxy_service() {
+echo "######################## _start_haproxy_service ########################"
     if ! isrunning
     then
 	oo-erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden > $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
         /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
+echo "######################## _wait_to_start ########################"
         wait_to_start
     else
         echo "HAProxy already running" 1>&2

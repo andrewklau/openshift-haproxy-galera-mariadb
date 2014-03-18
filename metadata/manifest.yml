@@ -1,5 +1,5 @@
 ---
-Name: mariadb-galera
+Name: haproxy-mariadb
 Cartridge-Short-Name: HAPROXYMARIADB
 Architecture: noarch
 Display-Name: HAProxy for MariaDB Galera Cluster
