@@ -65,7 +65,7 @@ Endpoints:
   Public-Port-Name: PROXY_DB_PORT
 - Private-IP-Name: PROXY_HOST
   Private-Port-Name: STATUS_PORT
-  Private-Port: 80
+  Private-Port: 8080
   Public-Port-Name: PROXY_STATUS_PORT
 - Private-IP-Name: HOST
   Private-Port-Name: META_PORT
@@ -74,4 +74,13 @@ Endpoints:
   Protocols:
   - http
   - mysql
+  Mappings:
+  - Frontend: /haproxy-status
+    Backend: /
+  - Frontend: /health
+    Backend: configuration/health
+    Options:
+      health: true
+  - Frontend: /metadata
+    Backend: configuration/env
 Install-Build-Required: false

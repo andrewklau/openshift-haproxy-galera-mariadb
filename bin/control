@@ -13,8 +13,6 @@ fi
 function isrunning() {
     if [ -f "${HAPROXY_PID}" ]; then
         haproxy_pid=`cat $HAPROXY_PID 2> /dev/null`
-echo "######################## isrunning() ########################"
-	echo "haproxy_pid = $haproxy_pid"
         [ -z "$haproxy_pid" ]  &&  return 1
         current_user=`id -u`
         if `ps --pid $haproxy_pid > /dev/null 2>&1` ||     \
@@ -39,16 +37,10 @@ function wait_to_start() {
 }
 
 function _start_haproxy_service() {
-echo "######################## _start_haproxy_service ########################"
-echo "HAPROXY_PID = $HAPROXY_PID"
-echo "OPENSHIFT_HAPROXYMARIADB_DIR = $OPENSHIFT_HAPROXYMARIADB_DIR"
     if ! isrunning
     then
-echo "######################## building cfg... ########################"
 	oo-erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden > $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
-echo "######################## starting haproxy... ########################"
-        /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg #> $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
-echo "######################## _wait_to_start ########################"
+        /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
         wait_to_start
     else
         echo "HAProxy already running" 1>&2

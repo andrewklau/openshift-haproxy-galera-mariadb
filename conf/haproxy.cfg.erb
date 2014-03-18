@@ -59,10 +59,3 @@ listen stats <%= "#{ENV['OPENSHIFT_HAPROXYMARIADB_HOST']}:#{ENV['OPENSHIFT_HAPRO
     mode http
     stats enable
     stats uri /
-
-listen express <%= "#{ENV['OPENSHIFT_HAPROXYMARIADB_HOST']}:#{ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT']}" %>
-    bind <%= "{ENV['OPENSHIFT_HAPROXYMARIADB_HOST']}:{ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT']}" %>
-    mode tcp
-    option mysql-check user haproxy
-    balance roundrobin
-#    server DB1 192.168.1.61:3307 check
