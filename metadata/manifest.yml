@@ -44,7 +44,6 @@ Cart-Data:
 - Key: OPENSHIFT_GEAR_UUID
   Type: environment
   Description: "Unique ID which identified the gear. This value changes between gears."
-
 Publishes:
   publish-haproxy:
     Type: NET_TCP:haproxy
@@ -61,7 +60,7 @@ Endpoints:
   Public-Port-Name: PROXY_DB_PORT
 - Private-IP-Name: PROXY_HOST
   Private-Port-Name: STATUS_PORT
-  Private-Port: 8001
+  Private-Port: 8080
   Public-Port-Name: PROXY_STATUS_PORT
 - Private-IP-Name: HOST
   Private-Port-Name: META_PORT
@@ -70,13 +69,4 @@ Endpoints:
   Protocols:
   - http
   - mysql
-  Mappings:
-  - Frontend: /db-proxy-status
-    Backend: /
-  - Frontend: /db-proxy-health
-    Backend: configuration/health
-    Options:
-      health: true
-  - Frontend: /db-metadata
-    Backend: configuration/env
 Install-Build-Required: false
