@@ -13,6 +13,8 @@ fi
 function isrunning() {
     if [ -f "${HAPROXY_PID}" ]; then
         haproxy_pid=`cat $HAPROXY_PID 2> /dev/null`
+echo "######################## isrunning() ########################"
+	echo "haproxy_pid = $haproxy_pid"
         [ -z "$haproxy_pid" ]  &&  return 1
         current_user=`id -u`
         if `ps --pid $haproxy_pid > /dev/null 2>&1` ||     \
@@ -38,6 +40,8 @@ function wait_to_start() {
 
 function _start_haproxy_service() {
 echo "######################## _start_haproxy_service ########################"
+echo "HAPROXY_PID = $HAPROXY_PID"
+echo "OPENSHIFT_HAPROXYMARIADB_DIR = $OPENSHIFT_HAPROXYMARIADB_DIR"
     if ! isrunning
     then
 	oo-erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden > $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
