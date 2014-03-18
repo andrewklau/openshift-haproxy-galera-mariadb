@@ -23,29 +23,13 @@ function isrunning() {
     return 1
 }
 
-function wait_to_start() {
-   ep=$(grep "listen stats" $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg | sed 's#listen\s*stats\s*\(.*\)#\1#')
-   i=0
-   while ( ! curl "http://$ep/haproxy-status/;csv" &> /dev/null )  && [ $i -lt 10 ]; do
-       sleep 1
-       i=$(($i + 1))
-   done
-
-   if [ $i -ge 10 ]; then
-      echo "`date`: HAProxy status check - max retries ($i) exceeded" 1>&2
-   fi
-}
-
 function _start_haproxy_service() {
     if ! isrunning
     then
 	oo-erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden > $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
-cat $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
         /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg #> $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
-        wait_to_start
     else
         echo "HAProxy already running" 1>&2
-        wait_to_start
     fi
 }
 
@@ -90,8 +74,6 @@ function _reload_service() {
         i=$(($i + 1))
         echo "`date`: Retrying HAProxy service reload - attempt #$((i+1)) ... "
     done
-
-    wait_to_start
 }
 
 function start() {
