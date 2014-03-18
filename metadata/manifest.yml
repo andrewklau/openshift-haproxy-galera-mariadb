@@ -44,11 +44,7 @@ Cart-Data:
 - Key: OPENSHIFT_GEAR_UUID
   Type: environment
   Description: "Unique ID which identified the gear. This value changes between gears."
-  
-Provides:
-- haproxy-1.4
-- haproxy
-- web_proxy
+
 Publishes:
   publish-haproxy:
     Type: NET_TCP:haproxy
