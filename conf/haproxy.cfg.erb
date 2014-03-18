@@ -54,7 +54,7 @@ defaults
     timeout check           10s
     maxconn                 128
 
-listen stats
+listen stats <%= ENV['OPENSHIFT_HAPROXYMARIADB_HOST'] %>:<%= ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_STATUS_PORT'] %>
     bind <%= ENV['OPENSHIFT_HAPROXYMARIADB_HOST'] %>:<%= ENV['OPENSHIFT_HAPROXYMARIADB_PROXY_STATUS_PORT'] %>
     mode http
     stats enable
