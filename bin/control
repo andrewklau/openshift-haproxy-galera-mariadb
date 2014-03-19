@@ -31,18 +31,19 @@ function _start_haproxy_service() {
 	# Append MariaDB
 	mariadb_hosts=( `cat $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS` )
 	if [ ${#mariadb_hosts[@]} >1 ]; then
-	echo '
-	listen mariadb-cluster
-	bind 0.0.0.0:3306
-	mode tcp
-	option mysql-check user haproxy
-	balance roundrobin' >> $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
-	i=0
+echo '
+listen mariadb-cluster
+bind 0.0.0.0:3306
+mode tcp
+option mysql-check user haproxy
+balance roundrobin' >> $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
+i=0
 	for t in "${mariadb_hosts[@]}"
 	do 
 		echo "server DB$i $t check" >> $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
 		i=$[$i +1]
 	done
+	fi
 
         /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
     else
