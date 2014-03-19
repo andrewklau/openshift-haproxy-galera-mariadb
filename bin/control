@@ -51,6 +51,10 @@ function _start_haproxy_service() {
     then
 	generate_conf
         /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
+	
+	# Need to properly control this (ie. start and kill with PID)
+	cd $OPENSHIFT_HAPROXYMARIADB_DIR/meta
+	python -m SimpleHTTPServer > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/simplehttpserver.log 2>&1
     else
         echo "HAProxy already running" 1>&2
     fi

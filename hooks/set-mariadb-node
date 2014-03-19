@@ -14,8 +14,9 @@ echo "$@" >> $OPENSHIFT_HAPROXYMARIADB_DIR/hook-log
 # Touch our variables so they are owned by our user
 if [ ! -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]; then
 	touch $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS
+	# Symlink to our metadata directory
+	ln -s $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS $OPENSHIFT_HAPROXYMARIADB_DIR/meta/OPENSHIFT_MARIADB_NODE_GEARS
 fi
-
 
 echo ${@:4};
 for arg in ${@:4}; do
@@ -62,5 +63,35 @@ for arg in ${@:4}; do
 
 done
 
-# Reload haproxy config
-$OPENSHIFT_HAPROXYMARIADB_DIR/bin/control reload
+##
+# Configure master_gear
+##
+
+if [ ! -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_MASTER_GEAR ]; then
+
+	total_hosts=( `cat $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS` )
+	# Check if it meets the minimum 3 requirement (only 3)
+	if [ ${#total_hosts[@]} == 3 ]
+	then
+
+		# Set master_gear to the first gear in array
+		master_gear=${total_hosts[0]}
+
+		# Determine lowest UUID with simple comparrision
+		for t in "${total_hosts[@]}"
+		do
+			if [ $t \< $master_gear ]
+			then
+			    	master_gear=$t
+			fi
+		done
+		
+		# Save our Results
+		echo $master_gear > $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_MASTER_GEAR
+		# Symlink to our metadata directory
+		ln -s $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_MASTER_GEAR $OPENSHIFT_HAPROXYMARIADB_DIR/meta/OPENSHIFT_MARIADB_MASTER_GEAR
+	fi
+elif
+	# Reload haproxy config
+	$OPENSHIFT_HAPROXYMARIADB_DIR/bin/control reload
+fi

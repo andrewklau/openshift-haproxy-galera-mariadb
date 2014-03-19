@@ -47,6 +47,10 @@ Cart-Data:
 Publishes:
   publish-haproxy:
     Type: NET_TCP:haproxy
+  publish-db-login:
+    Type: NET_TCP:db-login
+  publish-db-connection-info:
+    Type: ENV:NET_TCP:db:connection-info
 Subscribes:
   set-mariadb-node:
     Type: NET_TCP:mariadb-cluster
