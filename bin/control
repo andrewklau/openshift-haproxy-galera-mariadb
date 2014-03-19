@@ -23,9 +23,7 @@ function isrunning() {
     return 1
 }
 
-function _start_haproxy_service() {
-    if ! isrunning
-    then
+function generate_conf() {
 	oo-erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden > $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
 
 	# Append MariaDB
@@ -44,7 +42,12 @@ i=0
 		i=$[$i +1]
 	done
 	fi
+}
 
+function _start_haproxy_service() {
+    if ! isrunning
+    then
+	generate_conf
         /usr/sbin/haproxy -f $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/haproxy.log 2>&1
     else
         echo "HAProxy already running" 1>&2
@@ -85,6 +88,9 @@ function _reload_haproxy_service() {
 }
 
 function _reload_service() {
+    # Re-generate new config file
+    generate_conf
+
     [ -f $HAPROXY_PID ]  &&  zpid=$( /bin/cat "${HAPROXY_PID}" )
     i=0
     while (! _reload_haproxy_service "$zpid" )  && [ $i -lt 60 ]; do

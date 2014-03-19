@@ -61,3 +61,6 @@ for arg in ${@:4}; do
 	echo ${node_gears[@]} > $OPENSHIFT_MARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS
 
 done
+
+# Reload haproxy config
+$OPENSHIFT_HAPROXYMARIADB_DIR/bin/control reload
