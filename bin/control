@@ -27,7 +27,7 @@ function generate_conf() {
 	oo-erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden > $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
 
 	# Append MariaDB
-	if [ -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]
+	if [ -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]; then
 		mariadb_hosts=( `cat $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS` )
 		if [ ${#mariadb_hosts[@]} >1 ]; then
 			echo '
