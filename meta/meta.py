@@ -24,8 +24,7 @@ while True:
 	if sys.argv[1:]:
 	    port = int(sys.argv[1])
 	else:
-	    port = os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT')
-	    server_address = (os.environ.get('OPENSHIFT_HAPROXYMARIADB_HOST'), port)
+	    server_address = (os.environ.get('OPENSHIFT_HAPROXYMARIADB_HOST'), os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT'))
 
 	HandlerClass.protocol_version = Protocol
 	httpd = ServerClass(server_address, HandlerClass)
