@@ -30,12 +30,12 @@ function generate_conf() {
 	if [ -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]; then
 		mariadb_hosts=( `cat $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS` )
 		if [ ${#mariadb_hosts[@]} >1 ]; then
-			echo '
+			echo "
     listen mariadb-cluster
-    bind 0.0.0.0:3306
+    bind $OPENSHIFT_HAPROXYMARIADB_HOST:3306
     mode tcp
     option mysql-check user haproxy
-    balance roundrobin' >> $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
+    balance roundrobin" >> $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg
 			i=0
 		for t in "${mariadb_hosts[@]}"
 		do 
