@@ -21,9 +21,9 @@ while True:
 	ServerClass  = BaseHTTPServer.HTTPServer
 	Protocol     = "HTTP/1.0"
 
-	print os.environ.get('OPENSHIFT_HAPROXYMARIADB_HOST')
-	print os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT')
-        server_address = (os.environ.get('OPENSHIFT_HAPROXYMARIADB_HOST'), os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT'))
+	host = os.environ.get('OPENSHIFT_HAPROXYMARIADB_HOST')
+	port = os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT')
+        server_address = (host, port)
 
 	HandlerClass.protocol_version = Protocol
 	httpd = ServerClass(server_address, HandlerClass)
