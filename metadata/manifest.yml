@@ -68,7 +68,7 @@ Endpoints:
   Public-Port-Name: PROXY_STATUS_PORT
 - Private-IP-Name: HOST
   Private-Port-Name: META_PORT
-  Private-Port: 8000
+  Private-Port: 8001
   Public-Port-Name: PROXY_META_PORT
   Protocols:
   - http
