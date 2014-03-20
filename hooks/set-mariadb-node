@@ -9,7 +9,7 @@ set -e
 #namespace=$2
 #local_gear=$3
 
-echo "$@" >> $OPENSHIFT_HAPROXYMARIADB_DIR/hook-log
+#echo "$@" >> $OPENSHIFT_HAPROXYMARIADB_DIR/hook-log
 
 # Touch our variables so they are owned by our user
 if [ ! -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]; then

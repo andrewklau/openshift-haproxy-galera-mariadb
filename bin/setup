@@ -12,14 +12,3 @@ mkdir -p $OPENSHIFT_HAPROXYMARIADB_DIR/{logs,run,sessions,meta}
 
 # Move cnf files so they don't get automatically processed on boot
 mv $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb $OPENSHIFT_HAPROXYMARIADB_DIR/conf/haproxy.cfg.erb.hidden
-
-# Generate username, password create env variables
-echo 'Generating username and password'
-
-username=$(generate_username)
-password=$(generate_password)
-
-echo $username > $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_USERNAME
-echo $password > $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_PASSWORD
-echo "mysql://$username:$password@$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT" > $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_URL
-
