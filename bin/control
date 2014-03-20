@@ -55,6 +55,16 @@ function _start_haproxy_service() {
 	# Need to properly control this (ie. start and kill with PID)
 	cd $OPENSHIFT_HAPROXYMARIADB_DIR/meta
 	python meta.py > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/simplehttpserver.log 2>&1 &
+
+	client_result "Connection URL: mysql://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT/"
+	client_result ""
+	client_result "Note:"
+	client_result " - The backend MariaDB gears may take a while to start up.."
+	client_result " - This gear will act as your single point of entry to your MariaDB cartridge"
+	client_result " - Your HAProxy stats page is available here http://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_STATUS_PORT"
+	client_result " - A list of backend MariaDB gears are available here http://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_META_PORT"
+	client_result ""
+
     else
         echo "HAProxy already running" 1>&2
     fi
