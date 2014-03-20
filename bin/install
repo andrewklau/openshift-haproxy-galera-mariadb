@@ -25,7 +25,7 @@ client_result "   Root Password: $password"
 client_result "   Database Name: $OPENSHIFT_APP_NAME"
 client_result ""
 
-client_result "Connection URL: mysql://$OPENSHIFT_MYSQL_DB_HOST:$OPENSHIFT_MYSQL_DB_PORT/"
+client_result "Connection URL: mysql://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT/"
 client_result ""
 client_result "Note:"
 client_result " - The backend MariaDB gears may take a while to start up.."
