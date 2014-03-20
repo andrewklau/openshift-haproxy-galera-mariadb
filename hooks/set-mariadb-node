@@ -91,8 +91,7 @@ if [ ! -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_MASTER_GEAR ]; the
 		# Symlink to our metadata directory
 		ln -s $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_MASTER_GEAR $OPENSHIFT_HAPROXYMARIADB_DIR/meta/OPENSHIFT_MARIADB_MASTER_GEAR
 	fi
-elif
-then
+else
 	# Reload haproxy config
 	$OPENSHIFT_HAPROXYMARIADB_DIR/bin/control reload
 fi
