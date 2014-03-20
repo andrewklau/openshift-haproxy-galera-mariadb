@@ -18,6 +18,12 @@ if [ ! -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS ]; then
 	ln -s $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS $OPENSHIFT_HAPROXYMARIADB_DIR/meta/OPENSHIFT_MARIADB_NODE_GEARS
 fi
 
+if [ ! -f $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_GALERA_GEARS ]; then
+	touch $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_GALERA_GEARS
+	# Symlink to our metadata directory
+	ln -s $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_GALERA_GEARS $OPENSHIFT_HAPROXYMARIADB_DIR/meta/OPENSHIFT_MARIADB_GALERA_GEARS
+fi
+
 echo ${@:4};
 for arg in ${@:4}; do
 	arg=$(echo "$arg" | tr -d "\n" | tr -d "'")
@@ -60,6 +66,29 @@ for arg in ${@:4}; do
 
 	# Save our results
 	echo ${node_gears[@]} > $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_NODE_GEARS
+
+	## 
+	# Galera End Points
+	##
+
+	# List Galera gears
+	galera_gears=( `cat $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_GALERA_GEARS` )
+
+	# check if exists
+	if fgrep -q "${galera}" $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_GALERA_GEARS
+	then
+		# Remove the address from the array
+		# galera_gears=( "${galera_gears[@]/$galera}" )
+		echo 'Doing nothing...'
+
+	else
+		# Append to array of gears
+		galera_gears+=($galera)
+	fi
+
+	# Save our results
+	echo ${galera_gears[@]} > $OPENSHIFT_HAPROXYMARIADB_DIR/env/OPENSHIFT_MARIADB_GALERA_GEARS
+
 
 done
 
