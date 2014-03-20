@@ -56,6 +56,9 @@ function _start_haproxy_service() {
 	cd $OPENSHIFT_HAPROXYMARIADB_DIR/meta
 	python meta.py > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/simplehttpserver.log 2>&1 &
 
+	client_result "				#############################"
+	client_result "					HAProxy Started"
+	client_result "				#############################"
 	client_result "Connection URL: mysql://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT/"
 	client_result ""
 	client_result "Note:"
