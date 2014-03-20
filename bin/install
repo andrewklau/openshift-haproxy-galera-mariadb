@@ -34,7 +34,7 @@ client_result " - Your HAProxy stats page is available here http://$OPENSHIFT_GE
 client_result " - A list of backend MariaDB gears are available here http://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_META_PORT"
 client_result ""
 
-cart_props 'connection_url=mysql://$OPENSHIFT_MYSQL_DB_HOST:$OPENSHIFT_MYSQL_DB_PORT/'
+cart_props 'connection_url=mysql://$OPENSHIFT_GEAR_DNS:$OPENSHIFT_HAPROXYMARIADB_PROXY_DB_PORT/'
 cart_props "username=$username"
 cart_props "password=$password"
 cart_props "database_name=$OPENSHIFT_APP_NAME"
