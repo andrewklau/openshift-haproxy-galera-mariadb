@@ -54,7 +54,7 @@ function _start_haproxy_service() {
 	
 	# Need to properly control this (ie. start and kill with PID)
 	cd $OPENSHIFT_HAPROXYMARIADB_DIR/meta
-	# python meta.py # > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/simplehttpserver.log 2>&1
+	python meta.py > $OPENSHIFT_HAPROXYMARIADB_DIR/logs/simplehttpserver.log 2>&1
     else
         echo "HAProxy already running" 1>&2
     fi

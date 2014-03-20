@@ -22,7 +22,7 @@ while True:
 	Protocol     = "HTTP/1.0"
 
 	host = os.environ.get('OPENSHIFT_HAPROXYMARIADB_HOST')
-	port = os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT')
+	port = int(os.environ.get('OPENSHIFT_HAPROXYMARIADB_META_PORT'))
         server_address = (host, port)
 
 	HandlerClass.protocol_version = Protocol
