@@ -12,6 +12,12 @@ This is the HAProxy component to my OpenShift MariaDB Galera cartridge [1]
 
 **What does not work:**
 
-- The haproxy mysql-check does not currently work properly in my test environment because of the RDNS, and I don't have enough gears to try this in Online. I'm Australian :(
+- Nothing so far, please let me know if something breaks..
+
+**Disclaimer:**
+- Normal disclaimer, I'm doing this for my own personal learning and gain, with the hopes that this will also help another. 
+- Possibly become something which will be used in production environments. 
+- However with the nature of database replication software, I'm not responssible for data loss or anything while using this cartridge. 
+- Although I've tried very hard to prevent all possible common pitfalls.
 
 [1] https://github.com/andrewklau/openshift-galera-mariadb
