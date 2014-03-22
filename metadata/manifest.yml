@@ -62,7 +62,7 @@ Endpoints:
   Private-Port-Name: DB_PORT
   Private-Port: 3306
   Public-Port-Name: PROXY_DB_PORT
-- Private-IP-Name: PROXY_HOST
+- Private-IP-Name: HOST
   Private-Port-Name: STATUS_PORT
   Private-Port: 8080
   Public-Port-Name: PROXY_STATUS_PORT
